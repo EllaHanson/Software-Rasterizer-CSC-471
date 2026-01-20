@@ -111,17 +111,22 @@ void resize_obj(std::vector<tinyobj::shape_t> &shapes){
 
 int main(int argc, char **argv)
 {
-	if(argc < 3) {
-      cout << "Usage: raster meshfile imagefile" << endl;
+	if(argc < 6) {
+      cout << "Usage: raster meshfile imagefile width height colormode" << endl;
       return 0;
    }
 	// OBJ filename
 	string meshName(argv[1]);
 	string imgName(argv[2]);
+   g_width = stoi(argv[3]);
+   g_height = stoi(argv[4]);
+   int color_mode = stoi(argv[5]);
+   vector<float> depth_arr (g_width * g_height, -1.0f);
 
-	//set g_width and g_height appropriately!
-	g_width = 100;
-   g_height = 400;
+   if (color_mode != 0 && color_mode != 1) {
+      cout << "Color mode option not supported." << endl;
+      return 0;
+   }
 
    scale = min(g_width, g_height);
    offX = g_width / 2;
@@ -161,17 +166,73 @@ int main(int argc, char **argv)
 		posBuf = shapes[0].mesh.positions;
 		triBuf = shapes[0].mesh.indices;
 	}
-	cout << "Number of vertices: " << posBuf.size()/3 << endl;
-	cout << "Number of triangles: " << triBuf.size()/3 << endl;
 
-   //iterate throught vertices
-   for (int i = 0; i < posBuf.size()/3; i++) {
-      float x_p = W2PX(posBuf[3*i]);
-      float y_p = W2PY(posBuf[3*i + 1]);
-      image->setPixel(int(x_p), int(y_p), 0, 255, 0);
+   int num_tri = triBuf.size() / 3;
+   for (int i = 0; i < num_tri; i++) {
+      // indeces of da triangle
+      int i0 = triBuf[3*i];
+      int i1 = triBuf[3*i+1];
+      int i2 = triBuf[3*i+2];
+
+      // pixel coords for vertices of triangle
+      float a_x = W2PX(posBuf[3*i0]);
+      float a_y = W2PY(posBuf[3*i0 + 1]);
+      float a_z = posBuf[3*i0 + 2];
+
+      float b_x = W2PX(posBuf[3*i1]);
+      float b_y = W2PY(posBuf[3*i1 + 1]);
+      float b_z = posBuf[3*i1 + 2];
+
+      float c_x = W2PX(posBuf[3*i2]);
+      float c_y = W2PY(posBuf[3*i2 + 1]);
+      float c_z = posBuf[3*i2 + 2];
+
+      // find bounding box
+      int minX = min(a_x, min(b_x, c_x));
+      int maxX = max(a_x, max(b_x, c_x));
+      int minY = min(a_y, min(b_y, c_y));
+      int maxY = max(a_y, max(b_y, c_y));
+
+      if (minX < 0) minX = 0;
+      if (minY < 0) minY = 0;
+      if (maxX >= g_width) maxX = g_width - 1;
+      if (maxY >= g_height) maxY = g_height - 1;
+
+      // iterate through all pixels in the bounding box
+      for (int x = minX; x <= maxX; x++) {
+         for (int y = minY; y <= maxY; y++) {
+            float area = (((b_x - a_x) * (c_y - a_y)) - ((c_x - a_x) * (b_y - a_y)));
+				float b_area = (((a_x - c_x) * (y - c_y)) - ((x - c_x) * (a_y - c_y)));
+				float c_area = (((b_x - a_x) * (y - a_y)) - ((x - a_x) * (b_y - a_y)));
+				float beta = b_area / area;
+				float gamma = c_area / area;
+				float alpha = 1 - beta - gamma;
+
+            float depth = (alpha * a_z) + (beta * b_z) + (gamma * c_z);
+            depth = (depth + 1) / 2; // map depth from [-1, 1] to [0, 1]
+
+            if (!((alpha < 0) || (beta < 0) || (gamma < 0))) {
+               if (color_mode == 0) {
+                  if (depth_arr[y * g_width + x] <= depth) {
+                     depth_arr[y * g_width + x] = depth;
+                     image->setPixel(x, y, 0, 225 * depth, 0);
+                  }
+               }
+               else if (color_mode == 1) {
+                  bool on_edge = (alpha < 0.05 || beta < 0.05 || gamma < 0.05);
+                  if (on_edge && (depth_arr[y * g_width + x] <= depth)) {
+                     depth_arr[y * g_width + x] = depth;
+                     image->setPixel(x, y, 0, 225 * depth, 0);
+                  }
+               }
+				}
+         }
+      }
+
+      //cout << i0 << ", " << i1 << ", " << i2 << endl;
    }
-	
-	//write out the image
+
+   //write out the image
    image->writeToFile(imgName);
 
 	return 0;
