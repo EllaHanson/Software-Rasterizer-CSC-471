@@ -1,0 +1,3 @@
+/Users/ella/Desktop/Winter 26/Computer Graphics/Week 2/HW 1/P1RasterBase2020/build/CMakeFiles/raster.dir
+/Users/ella/Desktop/Winter 26/Computer Graphics/Week 2/HW 1/P1RasterBase2020/build/CMakeFiles/edit_cache.dir
+/Users/ella/Desktop/Winter 26/Computer Graphics/Week 2/HW 1/P1RasterBase2020/build/CMakeFiles/rebuild_cache.dir

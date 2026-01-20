@@ -1,0 +1,1 @@
+/usr/bin/c++  -std=c++0x -Wall -pedantic -arch x86_64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/raster.dir/src/Image.cpp.o CMakeFiles/raster.dir/src/main.cpp.o CMakeFiles/raster.dir/src/tiny_obj_loader.cpp.o -o raster
